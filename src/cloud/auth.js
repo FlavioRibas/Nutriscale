@@ -9,12 +9,24 @@ export async function getCurrentSession(){
   return {session:data?.session||null,error};
 }
 
+export async function getCurrentProfile(userId){
+  const supabase=await getSupabase();
+  if(!supabase||!userId) return {profile:null,error:null};
+  const {data,error}=await supabase
+    .from('profiles')
+    .select('id,display_name,preferred_language')
+    .eq('id',userId)
+    .maybeSingle();
+  return {profile:data||null,error};
+}
+
 export async function sendMagicLink({name,email,preferredLanguage='en'}){
   const supabase=await getSupabase();
   if(!supabase) return {error:new Error('Supabase is not configured.')};
   return supabase.auth.signInWithOtp({
     email:email.trim(),
     options:{
+      shouldCreateUser:true,
       emailRedirectTo:window.location.origin+window.location.pathname,
       data:{name:name.trim(),preferred_language:preferredLanguage}
     }
