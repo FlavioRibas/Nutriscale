@@ -161,6 +161,9 @@ function aggregateShopping(rs){
 function Logo({t}){return <div className="brand"><div className="brand-mark"><span>◒</span><span>◓</span></div><div><div className="brand-name">NutriScale</div><div className="brand-tagline">{t.tagline}</div></div></div>;}
 
 function App(){
+  const currentUserId=localStorage.getItem('nutriscale_current_user_id')||'anonymous';
+  const currentUserName=localStorage.getItem('nutriscale_current_user_name')||'Family';
+  const userKey=key=>`${key}_${currentUserId}`;
   const [language,setLanguage]=useState(()=>localStorage.getItem('nutriscale_language')||'en');
   const t=T[language];
   const [recipes,setRecipes]=useState(()=>JSON.parse(localStorage.getItem('nutriscale_recipes')||'null')||starter);
@@ -176,15 +179,15 @@ function App(){
   const [duplicate,setDuplicate]=useState(null);
   const [pending,setPending]=useState(null);
   const defaultStart=today();
-  const [plans,setPlans]=useState(()=>JSON.parse(localStorage.getItem('nutriscale_plans')||'null')||[{id:'default-plan',name:'My Weekly Plan',type:'Everyday',start:defaultStart,end:addDays(defaultStart,6),recurring:true,meals:{}}]);
-  const [activePlanId,setActivePlanId]=useState(()=>localStorage.getItem('nutriscale_active_plan')||'default-plan');
+  const [plans,setPlans]=useState(()=>JSON.parse(localStorage.getItem(userKey('nutriscale_plans'))||'null')||[{id:'default-plan',name:'My Weekly Plan',type:'Everyday',start:defaultStart,end:addDays(defaultStart,6),recurring:true,meals:{}}]);
+  const [activePlanId,setActivePlanId]=useState(()=>localStorage.getItem(userKey('nutriscale_active_plan'))||'default-plan');
   const [mealModal,setMealModal]=useState(null);
-  const [shoppingSelections,setShoppingSelections]=useState(()=>JSON.parse(localStorage.getItem('nutriscale_plan_shopping_selections')||'{}'));
-  const [shoppingPlanIds,setShoppingPlanIds]=useState(()=>JSON.parse(localStorage.getItem('nutriscale_shopping_plan_ids')||'[]'));
+  const [shoppingSelections,setShoppingSelections]=useState(()=>JSON.parse(localStorage.getItem(userKey('nutriscale_plan_shopping_selections'))||'{}'));
+  const [shoppingPlanIds,setShoppingPlanIds]=useState(()=>JSON.parse(localStorage.getItem(userKey('nutriscale_shopping_plan_ids'))||'[]'));
 
   const activePlan=plans.find(p=>p.id===activePlanId)||plans[0];
   const persistRecipes=n=>{setRecipes(n);localStorage.setItem('nutriscale_recipes',JSON.stringify(n));localStorage.setItem('nutriscale_categories',JSON.stringify(categories));};
-  const persistPlans=n=>{setPlans(n);localStorage.setItem('nutriscale_plans',JSON.stringify(n));};
+  const persistPlans=n=>{setPlans(n);localStorage.setItem(userKey('nutriscale_plans'),JSON.stringify(n));};
   const updatePlan=p=>persistPlans(plans.map(x=>x.id===p.id?p:x));
   const filtered=useMemo(()=>{const q=query.toLowerCase();return recipes.filter(r=>[r.title,(r.categories||[r.category]).join(' '),r.instructions,...r.ingredients.map(i=>i.name)].join(' ').toLowerCase().includes(q));},[recipes,query]);
 
@@ -265,21 +268,21 @@ function App(){
   function toggleShopDate(planId,date){
     const current=shoppingSelections[planId]||[];
     const next=current.includes(date)?current.filter(x=>x!==date):[...current,date];
-    const all={...shoppingSelections,[planId]:next};setShoppingSelections(all);localStorage.setItem('nutriscale_plan_shopping_selections',JSON.stringify(all));
+    const all={...shoppingSelections,[planId]:next};setShoppingSelections(all);localStorage.setItem(userKey('nutriscale_plan_shopping_selections'),JSON.stringify(all));
   }
   function toggleShoppingPlan(id){
     const next=shoppingPlanIds.includes(id)?shoppingPlanIds.filter(x=>x!==id):[...shoppingPlanIds,id];
-    setShoppingPlanIds(next);localStorage.setItem('nutriscale_shopping_plan_ids',JSON.stringify(next));
+    setShoppingPlanIds(next);localStorage.setItem(userKey('nutriscale_shopping_plan_ids'),JSON.stringify(next));
   }
   function buildPlanShopping(){
     const ids=shoppingPlanIds.includes(activePlan.id)?shoppingPlanIds:[...shoppingPlanIds,activePlan.id];
-    setShoppingPlanIds(ids);localStorage.setItem('nutriscale_shopping_plan_ids',JSON.stringify(ids));navigate('shopping');
+    setShoppingPlanIds(ids);localStorage.setItem(userKey('nutriscale_shopping_plan_ids'),JSON.stringify(ids));navigate('shopping');
   }
   function newPlan(){
     const s=today(),p={id:crypto.randomUUID(),name:'New Meal Plan',type:'Everyday',start:s,end:addDays(s,6),recurring:false,meals:{}};
-    persistPlans([...plans,p]);setActivePlanId(p.id);localStorage.setItem('nutriscale_active_plan',p.id);
+    persistPlans([...plans,p]);setActivePlanId(p.id);localStorage.setItem(userKey('nutriscale_active_plan'),p.id);
   }
-  function selectPlan(id){setActivePlanId(id);localStorage.setItem('nutriscale_active_plan',id);}
+  function selectPlan(id){setActivePlanId(id);localStorage.setItem(userKey('nutriscale_active_plan'),id);}
 
   const nav=[
     {id:'home',label:t.home,icon:HomeIcon},{id:'recipes',label:t.recipes,icon:BookOpen},
@@ -293,7 +296,7 @@ function App(){
       <button className="back-button" onClick={appBack}><ArrowLeft size={18}/>{t.backRecipes}</button>
       <RecipeDetail r={activeRecipe} t={t} tab={activeTab} setTab={setActiveTab} selected={selected.includes(activeRecipe.id)} toggle={()=>setSelected(s=>s.includes(activeRecipe.id)?s.filter(x=>x!==activeRecipe.id):[...s,activeRecipe.id])} addPlan={()=>setMealModal({recipe:activeRecipe,date:activePlan.start,mode:'date'})}/>
     </main> : <main className="content">
-      {screen==='home'&&<Home recipes={recipes} query={query} setQuery={setQuery} open={openRecipe} navigate={navigate} t={t}/>} 
+      {screen==='home'&&<Home recipes={recipes} query={query} setQuery={setQuery} open={openRecipe} navigate={navigate} t={t} userName={currentUserName}/>} 
       {screen==='recipes'&&<Recipes recipes={filtered} scope={scope} setScope={setScope} query={query} setQuery={setQuery} open={openRecipe} selected={selected} setSelected={setSelected} deleteRecipe={id=>persistRecipes(recipes.filter(r=>r.id!==id))} t={t}/>} 
       {screen==='scan'&&<Scan form={form} setForm={setForm} categories={categories} saveRecipe={saveRecipe} handleOCR={handleOCR} ocrStatus={ocrStatus} t={t}/>} 
       {screen==='planner'&&<Planner recipes={recipes} plans={plans} activePlan={activePlan} selectPlan={selectPlan} newPlan={newPlan} updatePlan={updatePlan} openMeal={date=>setMealModal({date,mode:'picker'})} removeMeal={removeMeal} shoppingSelections={shoppingSelections} toggleShopDate={toggleShopDate} buildShopping={buildPlanShopping} t={t} language={language}/>} 
@@ -307,7 +310,7 @@ function App(){
 
 function TopBar({nav,screen,navigate,t,language,changeLanguage}){return <header className="topbar"><Logo t={t}/><nav className="desktop-nav">{nav.filter(i=>!i.primary).map(i=>{const I=i.icon;return <button key={i.id} className={screen===i.id?'active':''} onClick={()=>navigate(i.id)}><I size={18}/>{i.label}</button>;})}</nav><div className="topbar-actions"><label className="language-switch"><Languages size={17}/><select value={language} onChange={e=>changeLanguage(e.target.value)}><option value="en">EN</option><option value="pt">PT-BR</option></select></label><button className="profile-button"><Users size={19}/><span>{t.family}</span></button></div></header>;}
 function BottomNav({nav,screen,navigate}){return <nav className="bottom-nav">{nav.map(i=>{const I=i.icon;return <button key={i.id} className={`${screen===i.id?'active':''} ${i.primary?'scan-nav':''}`} onClick={()=>navigate(i.id)}><span className="nav-icon"><I size={i.primary?24:20}/></span><span>{i.label}</span></button>;})}</nav>;}
-function Home({recipes,query,setQuery,open,navigate,t}){return <div><section className="welcome-row"><div><p className="welcome-kicker">{t.goodMorning}</p><h1>Flavio</h1><p>{t.healthyMeals}</p></div><div className="family-avatar"><Users size={24}/></div></section><div className="search-box large-search"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t.search}/></div><section className="category-grid">{['Breakfast','Lunch','Snacks','Dinner'].map((c,i)=><button key={c} className="category-card" onClick={()=>navigate('recipes')}><span>{['☀️','🥬','🍎','🍽️'][i]}</span><strong>{c}</strong></button>)}</section><section className="morning-feature premium-card"><div className="feature-copy"><span className="eyebrow">NutriScale pick</span><h2>Start your day well</h2><p>Simple, nutritious recipes for a healthier you and the people you love.</p><button className="primary-button" onClick={()=>navigate('recipes')}>{t.explore} →</button></div><div className="feature-photo"/></section><section className="section-block"><div className="section-heading"><h2>{t.popular}</h2><button className="text-button" onClick={()=>navigate('recipes')}>{t.seeAll}</button></div><div className="recipe-card-grid home-recipe-grid">{recipes.slice(0,5).map(r=><RecipeCard key={r.id} r={r} open={()=>open(r)}/>)}</div></section></div>;}
+function Home({recipes,query,setQuery,open,navigate,t,userName}){return <div><section className="welcome-row"><div><p className="welcome-kicker">{t.goodMorning}</p><h1>{userName}</h1><p>{t.healthyMeals}</p></div><div className="family-avatar"><Users size={24}/></div></section><div className="search-box large-search"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t.search}/></div><section className="category-grid">{['Breakfast','Lunch','Snacks','Dinner'].map((c,i)=><button key={c} className="category-card" onClick={()=>navigate('recipes')}><span>{['☀️','🥬','🍎','🍽️'][i]}</span><strong>{c}</strong></button>)}</section><section className="morning-feature premium-card"><div className="feature-copy"><span className="eyebrow">NutriScale pick</span><h2>Start your day well</h2><p>Simple, nutritious recipes for a healthier you and the people you love.</p><button className="primary-button" onClick={()=>navigate('recipes')}>{t.explore} →</button></div><div className="feature-photo"/></section><section className="section-block"><div className="section-heading"><h2>{t.popular}</h2><button className="text-button" onClick={()=>navigate('recipes')}>{t.seeAll}</button></div><div className="recipe-card-grid home-recipe-grid">{recipes.slice(0,5).map(r=><RecipeCard key={r.id} r={r} open={()=>open(r)}/>)}</div></section></div>;}
 function RecipeCard({r,open}){return <article className="recipe-card" onClick={open}><div className="recipe-card-image" style={{backgroundImage:`url(${img(r)})`}}><button className="heart-button"><Heart size={18}/></button></div><div className="recipe-card-body"><span className="eyebrow">{(r.categories||[r.category]).slice(0,2).join(' · ')}</span><h3>{r.title}</h3>{r.variantOf&&<span className="variant-badge">Similar variant</span>}<div className="recipe-meta"><span><Clock3 size={15}/>30 min</span><span><Utensils size={15}/>{r.servings}</span></div></div></article>;}
 function RecipeDetail({r,t,tab,setTab,selected,toggle,addPlan}){return <article className="recipe-detail premium-card"><div className="detail-image" style={{backgroundImage:`url(${img(r)})`}}/><div className="detail-body"><span className="eyebrow">{(r.categories||[r.category]).join(' · ')}</span><h1>{r.title}</h1>{r.variantSummary&&<div className="variant-note"><strong>{t.variant}</strong><p>{r.variantSummary}</p></div>}<div className="detail-tabs"><button className={tab==='ingredients'?'active':''} onClick={()=>setTab('ingredients')}>{t.ingredients}</button><button className={tab==='instructions'?'active':''} onClick={()=>setTab('instructions')}>{t.instructions}</button><button className={tab==='nutrition'?'active':''} onClick={()=>setTab('nutrition')}>{t.nutrition}</button></div><div className="detail-tab-content">{tab==='ingredients'&&<ul className="ingredient-list">{r.ingredients.map((i,n)=><li key={n}><span className="ingredient-check"><Check size={13}/></span><span>{i.name}</span><strong>{i.quantity} {i.unit}</strong></li>)}</ul>}{tab==='instructions'&&<div className="instructions-panel"><ChefHat size={23}/><p>{r.instructions}</p></div>}{tab==='nutrition'&&<div className="nutrition-panel"><Sparkles size={23}/><p>Nutrition details will appear here as verified nutrition data is added.</p></div>}</div><div className="detail-actions"><button className="secondary-button" onClick={toggle}><ShoppingCart size={18}/>{selected?t.addedShopping:t.addShopping}</button><button className="primary-button" onClick={addPlan}><ListChecks size={18}/>{t.addMealPlan}</button></div></div></article>;}
 function Recipes({recipes,scope,setScope,query,setQuery,open,selected,setSelected,deleteRecipe,t}){const shown=scope==='shared'?recipes.filter(r=>r.shared!==false):recipes.filter(r=>r.createdByCurrentUser!==false);return <div><section className="page-title-row"><div><span className="eyebrow">Your kitchen library</span><h1>{t.recipes}</h1></div></section><div className="library-tabs"><button className={scope==='mine'?'active':''} onClick={()=>setScope('mine')}>{t.myRecipes}</button><button className={scope==='shared'?'active':''} onClick={()=>setScope('shared')}>{t.sharedRecipes}</button></div><div className="search-box"><Search size={19}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t.search}/></div><div className="recipe-card-grid catalog-grid" style={{marginTop:24}}>{shown.map(r=><div key={r.id}><RecipeCard r={r} open={()=>open(r)}/>{scope==='shared'&&<div className="shared-meta">{r.attributionAllowed&&r.contributorName?`Shared by ${r.contributorName}`:'Community contributed'}</div>}<div className="catalog-actions"><button className={`select-button ${selected.includes(r.id)?'selected':''}`} onClick={()=>setSelected(s=>s.includes(r.id)?s.filter(x=>x!==r.id):[...s,r.id])}><ShoppingCart size={16}/>{selected.includes(r.id)?'Selected':'For shopping'}</button>{scope==='mine'&&<button className="delete-button" onClick={()=>deleteRecipe(r.id)}><Trash2 size={16}/></button>}</div></div>)}</div></div>;}
