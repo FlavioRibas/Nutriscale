@@ -1,0 +1,66 @@
+/* NutriScale design refinements: preserve ivory / forest / terracotta identity */
+
+.content { max-width: 1480px; padding-left: 36px; padding-right: 36px; }
+.topbar { padding-left: max(30px, calc((100vw - 1480px) / 2)); padding-right: max(30px, calc((100vw - 1480px) / 2)); }
+.brand { min-width: 300px; }
+.brand-name { font-size: 34px; }
+.brand-mark { font-size: 30px; width: 47px; }
+.brand-tagline { font-size: 10.5px; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.language-switch { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--white); color: var(--forest); border-radius: 999px; padding: 9px 11px; font-weight: 700; }
+.language-switch select { border: 0; outline: 0; background: transparent; color: var(--forest); font-weight: 700; cursor: pointer; }
+
+.home-recipe-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.home-recipe-grid .recipe-card-image { height: 155px; }
+.home-recipe-grid .recipe-card-body { padding: 15px; }
+.home-recipe-grid h3 { font-size: 1.04rem; }
+
+.detail-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-top: 22px; overflow-x: auto; }
+.detail-tabs button { appearance: none; border: 0; background: transparent; color: #787169; padding: 12px 15px; font-weight: 700; white-space: nowrap; border-bottom: 3px solid transparent; }
+.detail-tabs button.active { color: var(--forest); border-bottom-color: var(--forest); }
+.detail-tab-content { min-height: 190px; }
+.instructions-panel, .nutrition-panel { margin: 20px 0 10px; padding: 20px; border-radius: 18px; background: #f5f0e7; color: var(--forest); display: flex; align-items: flex-start; gap: 12px; }
+.instructions-panel p, .nutrition-panel p { margin: 0; }
+
+.modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(19, 40, 32, .42); backdrop-filter: blur(4px); display: grid; place-items: center; padding: 20px; }
+.meal-plan-modal { width: min(520px, 100%); max-height: 88vh; overflow: auto; position: relative; background: var(--white); border: 1px solid var(--line); border-radius: 28px; padding: 28px; box-shadow: 0 30px 90px rgba(29, 43, 36, .3); }
+.modal-close { position: absolute; right: 18px; top: 18px; width: 36px; height: 36px; border-radius: 50%; border: 0; display: grid; place-items: center; background: #f1ebe2; color: var(--forest); }
+.modal-recipe { display: flex; align-items: center; gap: 12px; margin: 18px 0; padding: 12px; background: #f8f3eb; border-radius: 18px; }
+.modal-recipe .meal-thumb { width: 58px; height: 58px; border-radius: 13px; background-size: cover; background-position: center; flex: 0 0 auto; }
+.day-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.day-options button { border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: var(--cream); color: var(--ink); font-weight: 700; }
+.day-options button.active { border-color: var(--forest); background: var(--sage); color: var(--forest-dark); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.toast-message { position: fixed; right: 24px; bottom: 28px; z-index: 110; display: flex; align-items: center; gap: 8px; background: var(--forest); color: white; border-radius: 999px; padding: 12px 17px; box-shadow: var(--shadow); font-weight: 700; }
+
+.planned-meal { width: 100%; border: 0; background: #f8f3eb; border-radius: 14px; padding: 9px; display: flex; align-items: center; gap: 9px; text-align: left; margin-bottom: 8px; color: var(--ink); }
+
+@media (max-width: 1280px) {
+  .home-recipe-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 980px) {
+  .content { padding-left: 22px; padding-right: 22px; }
+  .brand { min-width: unset; }
+  .brand-name { font-size: 30px; }
+  .home-recipe-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .language-switch { padding: 8px; }
+  .language-switch svg { display: none; }
+}
+
+@media (max-width: 720px) {
+  .topbar-actions .profile-button span { display: none; }
+  .brand-tagline { display: none; }
+  .brand-name { font-size: 27px; }
+  .home-recipe-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-recipe-grid .recipe-card-image { height: 150px; }
+  .detail-tabs { margin-left: -4px; margin-right: -4px; }
+  .detail-tabs button { flex: 1; padding-left: 9px; padding-right: 9px; font-size: 13px; }
+  .day-options { grid-template-columns: 1fr; }
+  .meal-plan-modal { padding: 24px 20px; }
+  .toast-message { left: 18px; right: 18px; bottom: 92px; justify-content: center; }
+}
+
+@media (max-width: 480px) {
+  .home-recipe-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+}
