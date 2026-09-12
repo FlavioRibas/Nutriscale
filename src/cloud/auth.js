@@ -1,0 +1,35 @@
+import {getSupabase,isSupabaseConfigured} from './supabaseClient.js';
+
+export {isSupabaseConfigured};
+
+export async function getCurrentSession(){
+  const supabase=await getSupabase();
+  if(!supabase) return {session:null,error:null};
+  const {data,error}=await supabase.auth.getSession();
+  return {session:data?.session||null,error};
+}
+
+export async function sendMagicLink({name,email,preferredLanguage='en'}){
+  const supabase=await getSupabase();
+  if(!supabase) return {error:new Error('Supabase is not configured.')};
+  return supabase.auth.signInWithOtp({
+    email:email.trim(),
+    options:{
+      emailRedirectTo:window.location.origin+window.location.pathname,
+      data:{name:name.trim(),preferred_language:preferredLanguage}
+    }
+  });
+}
+
+export async function signOut(){
+  const supabase=await getSupabase();
+  if(!supabase) return {error:null};
+  return supabase.auth.signOut();
+}
+
+export async function onAuthStateChange(callback){
+  const supabase=await getSupabase();
+  if(!supabase) return ()=>{};
+  const {data}=supabase.auth.onAuthStateChange((event,session)=>callback(event,session));
+  return ()=>data.subscription.unsubscribe();
+}
