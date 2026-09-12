@@ -5,14 +5,13 @@ on:
   push:
     branches:
       - design/premium-warm-ui
-    paths:
-      - .github/workflows/fix-main2.yml
 
 permissions:
   contents: write
 
 jobs:
   fix:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
