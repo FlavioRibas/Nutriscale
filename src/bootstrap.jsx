@@ -4,7 +4,7 @@ import {Languages,Leaf,LogIn,Mail,UserRound} from 'lucide-react';
 import './styles.css';
 import './refinements.css';
 import './auth-v1.css';
-import {getCurrentSession,onAuthStateChange,sendMagicLink,isSupabaseConfigured} from './cloud/auth.js';
+import {getCurrentProfile,getCurrentSession,onAuthStateChange,sendMagicLink,isSupabaseConfigured} from './cloud/auth.js';
 import {findLocalPrototypeRecipes,getRecipeImportDecision,recordRecipeImportDecision,importPrototypeRecipes,hydrateRecipeCache} from './cloud/migration.js';
 import {queueRecipeSync} from './cloud/recipeSync.js';
 import {syncTagsFromLabels} from './cloud/tags.js';
@@ -30,10 +30,21 @@ function patchStorageSync(){
   };
 }
 
-async function startApp(userId){
+async function startApp(user){
   if(appStarted) return;
   appStarted=true;
-  await hydrateRecipeCache(userId);
+
+  const {profile}=await getCurrentProfile(user.id);
+  const fallbackName=user.user_metadata?.name||user.email?.split('@')[0]||'Family';
+  const displayName=(profile?.display_name||fallbackName).trim();
+
+  localStorage.setItem('nutriscale_current_user_id',user.id);
+  localStorage.setItem('nutriscale_current_user_name',displayName);
+  if(profile?.preferred_language){
+    localStorage.setItem('nutriscale_language',profile.preferred_language==='pt-BR'?'pt':'en');
+  }
+
+  await hydrateRecipeCache(user.id);
   patchStorageSync();
   root.unmount();
   await import('./main3.jsx');
@@ -52,9 +63,9 @@ function AuthShell(){
   const [importing,setImporting]=useState(false);
 
   const copy=useMemo(()=>language==='pt'?{
-    title:'Bem-vindo ao NutriScale',subtitle:'Entre com seu nome e e-mail. Enviaremos um link seguro para entrar — sem senha.',name:'Nome',email:'E-mail',send:'Enviar link de acesso',check:'Verifique seu e-mail e abra o link do NutriScale.',importTitle:'Importar suas receitas existentes?',importText:n=>`Encontramos ${n} receita(s) salvas neste navegador. Você decide se deseja adicioná-las à sua conta NutriScale.`,importButton:'Importar minhas receitas',skip:'Não importar agora',working:'Importando…',config:'O projeto Supabase ainda não está configurado neste build.'
+    title:'Bem-vindo ao NutriScale',subtitle:'Entre com seu nome e e-mail. Enviaremos um link seguro para entrar — sem senha.',name:'Nome',email:'E-mail',send:'Enviar link de acesso',check:'Verifique sua caixa de entrada e spam. Se o link não chegar, aguarde cerca de um minuto antes de solicitar outro.',importTitle:'Importar suas receitas existentes?',importText:n=>`Encontramos ${n} receita(s) salvas neste navegador. Você decide se deseja adicioná-las à sua conta NutriScale.`,importButton:'Importar minhas receitas',skip:'Não importar agora',working:'Importando…',config:'O projeto Supabase ainda não está configurado neste build.'
   }:{
-    title:'Welcome to NutriScale',subtitle:'Sign in with your name and email. We will send you a secure sign-in link — no password needed.',name:'Name',email:'Email',send:'Send sign-in link',check:'Check your email and open the NutriScale sign-in link.',importTitle:'Import your existing recipes?',importText:n=>`We found ${n} recipe(s) saved in this browser. You choose whether to add them to your NutriScale account.`,importButton:'Import my recipes',skip:'Not now',working:'Importing…',config:'The Supabase development project is not configured in this build.'
+    title:'Welcome to NutriScale',subtitle:'Sign in with your name and email. We will send you a secure sign-in link — no password needed.',name:'Name',email:'Email',send:'Send sign-in link',check:'Check your inbox and spam folder. If the link does not arrive, wait about a minute before requesting another one.',importTitle:'Import your existing recipes?',importText:n=>`We found ${n} recipe(s) saved in this browser. You choose whether to add them to your NutriScale account.`,importButton:'Import my recipes',skip:'Not now',working:'Importing…',config:'The Supabase development project is not configured in this build.'
   },[language]);
 
   useEffect(()=>{
@@ -74,7 +85,7 @@ function AuthShell(){
     const decision=getRecipeImportDecision(user.id);
     const local=findLocalPrototypeRecipes();
     if(!decision&&local.length){setImportRecipes(local);setShowImport(true);return;}
-    startApp(user.id).catch(error=>{setMessage(error.message||String(error));setChecking(false);});
+    startApp(user).catch(error=>{setMessage(error.message||String(error));setChecking(false);});
   },[session]);
 
   async function requestLink(e){
@@ -90,7 +101,7 @@ function AuthShell(){
     try{
       await importPrototypeRecipes(session.user.id,importRecipes);
       setShowImport(false);
-      await startApp(session.user.id);
+      await startApp(session.user);
     }catch(error){setMessage(error.message||String(error));setImporting(false);}
   }
 
@@ -98,7 +109,7 @@ function AuthShell(){
     if(!session?.user) return;
     recordRecipeImportDecision(session.user.id,'skipped');
     setShowImport(false);
-    await startApp(session.user.id);
+    await startApp(session.user);
   }
 
   if(checking) return <div className="auth-page"><div className="auth-card premium-card"><div className="auth-brand"><Leaf size={28}/><strong>NutriScale</strong></div><p>Connecting…</p></div></div>;
