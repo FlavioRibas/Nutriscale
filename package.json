@@ -2,18 +2,22 @@
   "name": "nutriscale-mvp",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.19.0",
+  "engines": { "node": ">=24 <25" },
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "dev": "vite --configLoader native --host 127.0.0.1",
+    "build": "vite build --configLoader native",
+    "preview": "vite preview --configLoader native --host 127.0.0.1"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "lucide-react": "latest",
-    "tesseract.js": "latest"
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "lucide-react": "1.45.0",
+    "tesseract.js": "7.0.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.1",
+    "vite": "8.3.0"
+  }
 }

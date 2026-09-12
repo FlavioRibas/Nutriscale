@@ -1,0 +1,4 @@
+# Tesseract's postinstall only displays an OpenCollective funding message.
+# Browser OCR does not require this install script.
+allowBuilds:
+  tesseract.js: false

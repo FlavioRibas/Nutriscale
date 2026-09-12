@@ -1,0 +1,43 @@
+# Dependencies and build/test output
+node_modules/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+.pnpm-store/
+*.log
+
+# Local configuration and credentials (examples must contain placeholders only)
+.env
+.env.*
+!.env.example
+!.env.*.example
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+secrets/
+.vercel/
+.netlify/
+.supabase/
+supabase/.temp/
+
+# Private recipe uploads, exports, OCR caches, and local scratch work
+uploads/
+private-data/
+exports/
+*.traineddata
+*.traineddata.gz
+work/
+
+# OS and editor state
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
