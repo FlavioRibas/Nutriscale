@@ -5,3 +5,4 @@ export {findLocalPrototypeRecipes,getRecipeImportDecision,recordRecipeImportDeci
 export {refreshRecipesFromCloud,queueRecipeSync,syncRecipesNow} from './recipeSync.js';
 export {loadMealPlans,saveMealPlans,hydrateMealPlans,queueMealPlanSync} from './plans.js';
 export {hydrateCurrentShoppingState,saveCurrentShoppingState,queueCurrentShoppingSync} from './shopping.js';
+export {loadShoppingCarts,createShoppingCart,setShoppingItemChecked,renameShoppingCart,deleteShoppingCart} from './carts.js';
