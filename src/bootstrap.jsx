@@ -20,10 +20,11 @@ let appStarted=false;
 let storagePatched=false;
 
 function currentShoppingState(userId){
-  let planIds=[];let selections={};
+  let planIds=[];let selections={};let recipeIds=[];
   try{planIds=JSON.parse(localStorage.getItem(`nutriscale_shopping_plan_ids_${userId}`)||'[]');}catch{}
   try{selections=JSON.parse(localStorage.getItem(`nutriscale_plan_shopping_selections_${userId}`)||'{}');}catch{}
-  return {planIds,selections};
+  try{recipeIds=JSON.parse(localStorage.getItem(`nutriscale_shopping_recipe_ids_${userId}`)||'[]');}catch{}
+  return {planIds,selections,recipeIds};
 }
 
 function patchStorageSync(){
@@ -43,7 +44,7 @@ function patchStorageSync(){
     if(userId&&key===`nutriscale_plans_${userId}`){
       try{queueMealPlanSync(userId,JSON.parse(value||'[]'));}catch(error){console.error('KinPlate meal plan sync failed',error);}
     }
-    if(userId&&(key===`nutriscale_shopping_plan_ids_${userId}`||key===`nutriscale_plan_shopping_selections_${userId}`)){
+    if(userId&&(key===`nutriscale_shopping_plan_ids_${userId}`||key===`nutriscale_plan_shopping_selections_${userId}`||key===`nutriscale_shopping_recipe_ids_${userId}`)){
       queueCurrentShoppingSync(userId,currentShoppingState(userId));
     }
   };
