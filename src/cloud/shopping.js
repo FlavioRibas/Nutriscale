@@ -3,6 +3,7 @@ import {getSupabase} from './supabaseClient.js';
 const CURRENT_LIST_NAME='KinPlate Current Shopping';
 const selectionsKey=userId=>`nutriscale_plan_shopping_selections_${userId}`;
 const planIdsKey=userId=>`nutriscale_shopping_plan_ids_${userId}`;
+const recipeIdsKey=userId=>`nutriscale_shopping_recipe_ids_${userId}`;
 
 async function getOrCreateCurrentList(userId){
   const supabase=await getSupabase();
@@ -26,19 +27,26 @@ async function getOrCreateCurrentList(userId){
   return created;
 }
 
-export async function saveCurrentShoppingState(userId,{planIds=[],selections={}}={}){
+export async function saveCurrentShoppingState(userId,{planIds=[],selections={},recipeIds=[]}={}){
   const supabase=await getSupabase();
   if(!supabase) return;
   const list=await getOrCreateCurrentList(userId);
   if(!list) return;
   const {error:deleteError}=await supabase.from('shopping_list_sources').delete().eq('shopping_list_id',list.id);
   if(deleteError) throw deleteError;
-  const rows=(planIds||[]).map(planId=>({
-    shopping_list_id:list.id,
-    source_type:'meal_plan',
-    meal_plan_id:planId,
-    selected_dates:Array.isArray(selections?.[planId])&&selections[planId].length?selections[planId]:null
-  }));
+  const rows=[
+    ...(planIds||[]).map(planId=>({
+      shopping_list_id:list.id,
+      source_type:'meal_plan',
+      meal_plan_id:planId,
+      selected_dates:Array.isArray(selections?.[planId])&&selections[planId].length?selections[planId]:null
+    })),
+    ...(recipeIds||[]).map(recipeId=>({
+      shopping_list_id:list.id,
+      source_type:'recipe',
+      recipe_id:recipeId
+    }))
+  ];
   if(rows.length){
     const {error}=await supabase.from('shopping_list_sources').insert(rows);
     if(error) throw error;
@@ -49,7 +57,7 @@ export async function saveCurrentShoppingState(userId,{planIds=[],selections={}}
 
 export async function hydrateCurrentShoppingState(userId){
   const supabase=await getSupabase();
-  if(!supabase) return {planIds:[],selections:{}};
+  if(!supabase) return {planIds:[],selections:{},recipeIds:[]};
   const {data:list,error}=await supabase
     .from('shopping_lists')
     .select('id')
@@ -63,26 +71,29 @@ export async function hydrateCurrentShoppingState(userId){
   if(list){
     const {data:sources,error:sourcesError}=await supabase
       .from('shopping_list_sources')
-      .select('meal_plan_id,selected_dates')
-      .eq('shopping_list_id',list.id)
-      .eq('source_type','meal_plan');
+      .select('source_type,meal_plan_id,recipe_id,selected_dates')
+      .eq('shopping_list_id',list.id);
     if(sourcesError) throw sourcesError;
-    const planIds=[];const selections={};
+    const planIds=[];const selections={};const recipeIds=[];
     (sources||[]).forEach(source=>{
-      if(!source.meal_plan_id) return;
-      planIds.push(source.meal_plan_id);
-      if(Array.isArray(source.selected_dates)&&source.selected_dates.length) selections[source.meal_plan_id]=source.selected_dates;
+      if(source.source_type==='meal_plan'&&source.meal_plan_id){
+        planIds.push(source.meal_plan_id);
+        if(Array.isArray(source.selected_dates)&&source.selected_dates.length) selections[source.meal_plan_id]=source.selected_dates;
+      }
+      if(source.source_type==='recipe'&&source.recipe_id) recipeIds.push(source.recipe_id);
     });
     localStorage.setItem(planIdsKey(userId),JSON.stringify(planIds));
     localStorage.setItem(selectionsKey(userId),JSON.stringify(selections));
-    return {planIds,selections};
+    localStorage.setItem(recipeIdsKey(userId),JSON.stringify(recipeIds));
+    return {planIds,selections,recipeIds};
   }
 
-  let planIds=[];let selections={};
+  let planIds=[];let selections={};let recipeIds=[];
   try{planIds=JSON.parse(localStorage.getItem(planIdsKey(userId))||'[]');}catch{}
   try{selections=JSON.parse(localStorage.getItem(selectionsKey(userId))||'{}');}catch{}
-  await saveCurrentShoppingState(userId,{planIds,selections});
-  return {planIds,selections};
+  try{recipeIds=JSON.parse(localStorage.getItem(recipeIdsKey(userId))||'[]');}catch{}
+  await saveCurrentShoppingState(userId,{planIds,selections,recipeIds});
+  return {planIds,selections,recipeIds};
 }
 
 let syncTimer;
