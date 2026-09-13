@@ -62,13 +62,10 @@ export async function createShoppingCart(userId,{name='Shopping List',planSource
   return list;
 }
 
-export async function setShoppingItemChecked(userId,itemId,isChecked){
+export async function setShoppingItemChecked(_userId,itemId,isChecked){
   const supabase=await client();
-  const {error}=await supabase
-    .from('shopping_list_items')
-    .update({is_checked:Boolean(isChecked)})
-    .eq('id',itemId)
-    .in('shopping_list_id',supabase.from('shopping_lists').select('id').eq('owner_id',userId));
+  // RLS on shopping_list_items restricts updates to lists owned by the signed-in user.
+  const {error}=await supabase.from('shopping_list_items').update({is_checked:Boolean(isChecked)}).eq('id',itemId);
   if(error) throw error;
 }
 
