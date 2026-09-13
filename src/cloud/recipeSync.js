@@ -1,4 +1,5 @@
-import {loadRecipeCatalogue,reconcileOwnedRecipes} from './recipes.js';
+import {loadRecipeCatalogue} from './recipes.js';
+import {mergeOwnedRecipes} from './recipeMergeSync.js';
 
 let syncTimer=null;
 
@@ -11,11 +12,11 @@ export async function refreshRecipesFromCloud(){
 export function queueRecipeSync(recipes,onError=console.error){
   clearTimeout(syncTimer);
   syncTimer=setTimeout(async()=>{
-    try{await reconcileOwnedRecipes(recipes);}catch(error){onError(error);}
+    try{await mergeOwnedRecipes(recipes);}catch(error){onError(error);}
   },500);
 }
 
 export async function syncRecipesNow(recipes){
   clearTimeout(syncTimer);
-  await reconcileOwnedRecipes(recipes);
+  await mergeOwnedRecipes(recipes);
 }
