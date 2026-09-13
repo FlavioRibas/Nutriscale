@@ -1,4 +1,4 @@
-name: Deploy NutriScale preview to GitHub Pages
+name: Deploy KinPlate preview to GitHub Pages
 
 on:
   push:
