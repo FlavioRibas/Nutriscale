@@ -1,0 +1,1 @@
+export const KINPLATE_PREFS_VERSION=1;
