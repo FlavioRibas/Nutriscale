@@ -7,6 +7,7 @@ import './auth-v1.css';
 import './kinplate-brand.css';
 import './shopping-cloud-ui.css';
 import './shopping-cloud-ui.js';
+import './scan/scan-vision-bridge.js';
 import {getCurrentProfile,getCurrentSession,onAuthStateChange,sendMagicLink,isSupabaseConfigured} from './cloud/auth.js';
 import {findLocalPrototypeRecipes,getRecipeImportDecision,recordRecipeImportDecision,importPrototypeRecipes,hydrateRecipeCache} from './cloud/migration.js';
 import {queueRecipeSync} from './cloud/recipeSync.js';
