@@ -10,41 +10,109 @@ function blobToDataUrl(blob){
   });
 }
 
+function canvasToJpeg(canvas){
+  return new Promise((resolve,reject)=>canvas.toBlob(
+    blob=>blob?resolve(blob):reject(new Error('Could not convert this photo to JPEG.')),
+    'image/jpeg',0.92
+  ));
+}
+
+async function decodeWithImageElement(file){
+  const url=URL.createObjectURL(file);
+  try{
+    const image=new Image();
+    image.decoding='async';
+    await new Promise((resolve,reject)=>{
+      image.onload=resolve;
+      image.onerror=()=>reject(new Error('The browser could not decode this photo.'));
+      image.src=url;
+    });
+    return image;
+  }finally{
+    // Keep the object URL alive until the caller has drawn the image.
+  }
+}
+
+function makeCanvas(width,height){
+  const maxSide=2200;
+  const scale=Math.min(1,maxSide/Math.max(width,height));
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(width*scale));
+  canvas.height=Math.max(1,Math.round(height*scale));
+  return canvas;
+}
+
 async function normalizeImageForVision(file){
   const supported=['image/jpeg','image/png','image/webp','image/gif'];
-  if(supported.includes((file.type||'').toLowerCase())) return file;
-  // iPhone libraries commonly return HEIC/HEIF. Safari can decode these locally,
-  // while vision APIs generally expect JPEG/PNG/WebP/GIF, so convert before upload.
+  const type=(file.type||'').toLowerCase();
+  if(supported.includes(type)) return file;
+
+  // iPhone libraries can provide HEIC/HEIF. Different Safari versions expose
+  // different decoders, so try createImageBitmap first and an <img> fallback.
   let bitmap;
   try{
     bitmap=await createImageBitmap(file);
-    const maxSide=2200;
-    const scale=Math.min(1,maxSide/Math.max(bitmap.width,bitmap.height));
-    const canvas=document.createElement('canvas');
-    canvas.width=Math.max(1,Math.round(bitmap.width*scale));
-    canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    const canvas=makeCanvas(bitmap.width,bitmap.height);
     canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);
-    const jpeg=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Could not convert this photo to JPEG.')),'image/jpeg',0.92));
-    return jpeg;
-  }catch(error){
-    throw new Error('This photo format could not be prepared for recognition. Please choose a JPEG, PNG, or a screenshot of the recipe.');
-  }finally{bitmap?.close?.();}
+    return await canvasToJpeg(canvas);
+  }catch(bitmapError){
+    let url;
+    try{
+      url=URL.createObjectURL(file);
+      const image=new Image();
+      image.decoding='async';
+      await new Promise((resolve,reject)=>{
+        image.onload=resolve;
+        image.onerror=()=>reject(bitmapError||new Error('The browser could not decode this photo.'));
+        image.src=url;
+      });
+      const canvas=makeCanvas(image.naturalWidth||image.width,image.naturalHeight||image.height);
+      canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+      return await canvasToJpeg(canvas);
+    }catch{
+      throw new Error('This photo format could not be prepared for recognition. Please choose a JPEG, PNG, or a screenshot of the recipe.');
+    }finally{
+      if(url) URL.revokeObjectURL(url);
+    }
+  }finally{
+    bitmap?.close?.();
+  }
+}
+
+async function readFunctionError(error){
+  const response=error?.context;
+  if(response&&typeof response.clone==='function'){
+    try{
+      const details=await response.clone().json();
+      const providerMessage=details?.details?.error?.message;
+      return providerMessage||details?.error||details?.message||error?.message||'Recipe recognition failed.';
+    }catch{}
+  }
+  return error?.message||String(error);
 }
 
 export async function recognizeRecipeImage(file,{language='en'}={}){
   if(!file) throw new Error('Choose a recipe image first.');
   if(!file.type?.startsWith('image/')) throw new Error('KinPlate currently accepts recipe images for visual recognition.');
+
   const supabase=await getSupabase();
   if(!supabase) throw new Error('KinPlate cloud connection is not available.');
+
+  const {data:sessionData,error:sessionError}=await supabase.auth.getSession();
+  if(sessionError) throw new Error(sessionError.message||'Could not verify your KinPlate session.');
+  const accessToken=sessionData?.session?.access_token;
+  if(!accessToken) throw new Error('Your KinPlate session has expired. Please sign in again before scanning a recipe.');
+
   const prepared=await normalizeImageForVision(file);
   const imageDataUrl=await blobToDataUrl(prepared);
-  const {data,error}=await supabase.functions.invoke('recognize-recipe',{body:{imageDataUrl,language}});
-  if(error){
-    const context=error?.context;
-    if(context?.json){try{const details=await context.json();throw new Error(details?.error||details?.message||error.message);}catch(parsed){if(parsed instanceof Error&&parsed.message!==error.message)throw parsed;}}
-    throw error;
-  }
+
+  const {data,error}=await supabase.functions.invoke('recognize-recipe',{
+    body:{imageDataUrl,language},
+    headers:{Authorization:`Bearer ${accessToken}`}
+  });
+  if(error) throw new Error(await readFunctionError(error));
   if(!data?.recipe) throw new Error(data?.error||'No recipe was recognized.');
+
   return {...data,recipe:normalizeScannedRecipe(data.recipe)};
 }
 
