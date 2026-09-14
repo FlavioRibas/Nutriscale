@@ -25,14 +25,14 @@ function setNativeValue(element,value){
 
 function fillReviewForm(recipe){
   const form=document.querySelector('.recipe-form');
-  if(!form)return;
+  if(!form)throw new Error('Recipe review form is not available.');
   const mapped=scannedRecipeToPrototypeForm(recipe,{});
   const inputs=form.querySelectorAll('input');
   const textareas=form.querySelectorAll('textarea');
   const title=[...inputs].find(x=>x.type==='text'&&!x.placeholder?.includes('Name shown'));
   const servings=[...inputs].find(x=>x.type==='number');
   if(title)setNativeValue(title,mapped.title||'');
-  if(servings)setNativeValue(servings,String(mapped.servings||1));
+  if(servings&&recipe.servings!=null)setNativeValue(servings,String(mapped.servings));
   if(textareas[0])setNativeValue(textareas[0],mapped.rawIngredients||'');
   if(textareas[1])setNativeValue(textareas[1],mapped.instructions||'');
   const notes=[...inputs].find(x=>x!==title&&x.type==='text'&&!x.placeholder?.includes('Name shown'));
@@ -43,7 +43,7 @@ async function onImage(file){
   if(!file||busy)return;
   busy=true;
   const language=localStorage.getItem('nutriscale_language')||'en';
-  status(language==='pt'?'Analisando a receita com KinPlate Vision…':'Analyzing the recipe with KinPlate Vision…');
+  status(language==='pt'?'Foto selecionada. Analisando com KinPlate Vision…':'Photo selected. Analyzing with KinPlate Vision…');
   try{
     const {recipe}=await recognizeRecipeImage(file,{language});
     fillReviewForm(recipe);
@@ -51,7 +51,8 @@ async function onImage(file){
     status(language==='pt'?`Receita reconhecida. Revise os campos${uncertainty?` — ${uncertainty} item(ns) precisam de atenção.`:'.'}`:`Recipe recognized. Review the fields${uncertainty?` — ${uncertainty} item(s) need attention.`:'.'}`,'success');
   }catch(error){
     console.error('KinPlate Vision scan failed',error);
-    status(language==='pt'?'Não foi possível reconhecer esta imagem. Tente novamente.':'KinPlate could not recognize this image. Please try again.','error');
+    const detail=error?.message||String(error);
+    status(language==='pt'?`Não foi possível reconhecer a imagem: ${detail}`:`Recognition failed: ${detail}`,'error');
   }finally{busy=false;}
 }
 
@@ -62,6 +63,9 @@ export function installVisionScanBridge(){
     if(!(input instanceof HTMLInputElement)||input.type!=='file'||!input.closest('.scan-options'))return;
     const file=input.files?.[0];
     if(!file)return;
+    // Prevent the legacy Tesseract handler from running. Vision is now the only
+    // primary image-recognition path for the Scan controls.
+    event.preventDefault();
     event.stopImmediatePropagation();
     onImage(file);
   },true);
